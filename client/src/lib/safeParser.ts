@@ -11,24 +11,31 @@ export function parseSAFEDocument(text: string): SAFETerms | null {
     // Function to parse number strings with flexible format
     const parseNumber = (str: string): number => {
       if (!str) return 0;
-      // Remove all whitespace and commas, then convert to number
-      const cleanStr = str.replace(/[\s,]/g, '');
+      // Remove $ and any other non-numeric chars except . and ,
+      const cleaned = str.replace(/[^\d.,]/g, '');
       // Handle both integer and decimal formats
-      return Number(cleanStr.includes('.') ? cleanStr : cleanStr + '.00');
+      return Number(cleaned.replace(/,/g, ''));
     };
 
-    // Extract investment amount with specific pattern
-    const investmentMatch = text.match(/(?:purchase\s+amount|investment\s+amount)[\s:]*\$\s*([\d,]+(?:\.\d{2})?)/i);
+    // Extract investment amount with more flexible pattern
+    const investmentMatch = text.match(/(?:purchase|investment|amount|invest).*?(\$\s*[\d,]+(?:\.\d{2})?|\d[\d,]*(?:\.\d{2})?)/i);
     const investmentAmount = investmentMatch ? parseNumber(investmentMatch[1]) : 0;
 
-    // Extract post-money valuation cap
-    const valCapMatch = text.match(/(?:post-money\s+valuation\s+cap|valuation\s+cap)[\s:]*\$\s*([\d,]+(?:\.\d{2})?)/i);
+    // Extract valuation cap with more flexible pattern
+    const valCapMatch = text.match(/(?:valuation|cap|value).*?(\$\s*[\d,]+(?:\.\d{2})?|\d[\d,]*(?:\.\d{2})?)/i);
     const valuationCap = valCapMatch ? parseNumber(valCapMatch[1]) : 0;
 
-    // Debug logging for raw matches
-    console.log('Raw matches:', {
-      investmentText: investmentMatch?.[0],
-      valuationText: valCapMatch?.[0]
+    // Detailed debug logging
+    console.log('Document parsing debug:', {
+      text: text.substring(0, 100), // First 100 chars for context
+      foundMatches: {
+        investment: investmentMatch,
+        valuation: valCapMatch
+      },
+      parsedNumbers: {
+        investment: investmentMatch ? parseNumber(investmentMatch[1]) : null,
+        valuation: valCapMatch ? parseNumber(valCapMatch[1]) : null
+      }
     });
 
     // Extract discount rate with more variations
