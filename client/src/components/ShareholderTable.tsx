@@ -209,8 +209,30 @@ export default function ShareholderTable({ shareholders, isLoading }: Shareholde
               type="number"
               step="0.01"
               min="0"
-              value={optionPoolSize}
-              onChange={(e) => updateOptionPoolMutation.mutate(Number(e.target.value))}
+              defaultValue={optionPoolSize}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (!isNaN(Number(value)) && Number(value) >= 0) {
+                  e.target.value = value;
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const value = Number(e.currentTarget.value);
+                  if (!isNaN(value) && value >= 0) {
+                    updateOptionPoolMutation.mutate(value);
+                  }
+                }
+              }}
+              onBlur={(e) => {
+                const value = Number(e.target.value);
+                if (!isNaN(value) && value >= 0) {
+                  updateOptionPoolMutation.mutate(value);
+                } else {
+                  // Reset to previous valid value if invalid input
+                  e.target.value = String(optionPoolSize);
+                }
+              }}
               className="w-32"
             />
             <span className="text-sm text-muted-foreground">
