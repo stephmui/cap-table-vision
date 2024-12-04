@@ -27,8 +27,8 @@ export default function ShareholderTable({ shareholders, isLoading }: Shareholde
     resolver: zodResolver(insertShareholderSchema),
     defaultValues: {
       name: "",
-      sharesOwned: 0,
-      optionsGranted: 0,
+      sharesOwned: "0",
+      optionsGranted: "0",
       shareClass: "common",
     },
   });
@@ -68,7 +68,14 @@ export default function ShareholderTable({ shareholders, isLoading }: Shareholde
               <DialogTitle>Add New Shareholder</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))}>
+              <form onSubmit={form.handleSubmit((data) => {
+                const formattedData = {
+                  ...data,
+                  sharesOwned: parseFloat(data.sharesOwned),
+                  optionsGranted: parseFloat(data.optionsGranted)
+                };
+                mutation.mutate(formattedData);
+              })}>
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label>Name</label>
@@ -76,11 +83,19 @@ export default function ShareholderTable({ shareholders, isLoading }: Shareholde
                   </div>
                   <div className="space-y-2">
                     <label>Shares Owned</label>
-                    <Input type="number" {...form.register("sharesOwned", { valueAsNumber: true })} />
+                    <Input 
+                      type="number" 
+                      step="0.01" 
+                      {...form.register("sharesOwned")}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label>Options Granted</label>
-                    <Input type="number" {...form.register("optionsGranted", { valueAsNumber: true })} />
+                    <Input 
+                      type="number" 
+                      step="0.01" 
+                      {...form.register("optionsGranted")}
+                    />
                   </div>
                   <Button type="submit">Add Shareholder</Button>
                 </div>
