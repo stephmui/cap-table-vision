@@ -128,12 +128,16 @@ export default function ShareholderTable({ shareholders, isLoading }: Shareholde
   const calculateOwnership = (sharesOwned: string) => {
     if (!shareholders?.length) return "0.00";
     
+    // Get total shares from all shareholders
     const totalShares = shareholders.reduce((acc, s) => acc + Number(s.sharesOwned), 0);
+    
+    // Add option pool size to get total equity
     const optionPoolSize = optionPool?.size ? Number(optionPool.size) : 0;
     const totalEquity = totalShares + optionPoolSize;
     
     if (totalEquity === 0) return "0.00";
     
+    // Calculate individual ownership as (shareholder shares / total equity) * 100
     const ownership = (Number(sharesOwned) / totalEquity) * 100;
     return ownership.toFixed(2);
   };
