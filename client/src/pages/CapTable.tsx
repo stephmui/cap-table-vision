@@ -10,6 +10,7 @@ export interface Investment {
   amount: number;
   preMoney: number;
   optionPool: number;
+  isPostMoney?: boolean;
 }
 
 export default function CapTablePage() {

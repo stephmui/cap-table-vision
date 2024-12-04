@@ -29,10 +29,15 @@ export default function SAFEDocumentParser({ onTermsExtracted }: SAFEDocumentPar
     }
 
     setErrors([]);
+    // For SAFE agreements, valuationCap is typically post-money
+    const isPostMoney = true;
+    const preMoney = terms.valuationCap - terms.investmentAmount;
+    
     onTermsExtracted({
       amount: terms.investmentAmount,
-      preMoney: terms.valuationCap,
+      preMoney,
       optionPool: 0, // Option pool size is typically not specified in SAFE
+      isPostMoney,
     });
   };
 

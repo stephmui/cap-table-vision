@@ -22,25 +22,19 @@ export default function TermSheetAnalyzer({
   investment,
   onInvestmentChange,
 }: TermSheetAnalyzerProps) {
-  const [isPostMoney, setIsPostMoney] = useState(false);
+  const [isPostMoney, setIsPostMoney] = useState(true);
   const totalShares = shareholders?.reduce((acc, s) => acc + Number(s.sharesOwned || 0), 0) ?? 0;
-  
-  // Calculate pre-money valuation from post-money if needed
-  const getPreMoneyValuation = (postMoneyVal: number) => {
-    return postMoneyVal - (investment.amount || 0);
+
+  const handlePreMoneyChange = (value: number) => {
+    onInvestmentChange({ ...investment, preMoney: value });
   };
 
-  // Calculate post-money valuation from pre-money
-  const getPostMoneyValuation = (preMoneyVal: number) => {
-    return preMoneyVal + (investment.amount || 0);
-  };
-
-  const handleValuationChange = (value: number) => {
-    const preMoney = isPostMoney ? getPreMoneyValuation(value) : value;
+  const handlePostMoneyChange = (value: number) => {
+    const preMoney = value - (investment.amount || 0);
     onInvestmentChange({ ...investment, preMoney });
   };
 
-  const currentPostMoney = getPostMoneyValuation(investment.preMoney || 0);
+  const currentPostMoney = (investment.preMoney || 0) + (investment.amount || 0);
   const newShares = totalShares > 0 && investment?.amount && investment?.preMoney ? 
     calculateNewShares(investment.amount, investment.preMoney, totalShares) : 0;
   const dilution = calculateDilution(totalShares, newShares);
@@ -66,26 +60,34 @@ export default function TermSheetAnalyzer({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Valuation ($)</label>
-            <div className="flex flex-col space-y-2">
-              <Input
-                type="number"
-                min="0"
-                value={isPostMoney ? currentPostMoney || '' : investment.preMoney || ''}
-                onChange={(e) => handleValuationChange(Number(e.target.value))}
-                className="font-mono"
-              />
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="isPostMoney"
-                  checked={isPostMoney}
-                  onCheckedChange={(checked) => setIsPostMoney(checked as boolean)}
-                />
-                <label htmlFor="isPostMoney" className="text-sm text-muted-foreground">
-                  Post-money valuation
-                </label>
-              </div>
-            </div>
+            <label className="block text-sm font-medium mb-2">Pre-money Valuation ($)</label>
+            <Input
+              type="number"
+              min="0"
+              value={investment.preMoney || ''}
+              onChange={(e) => handlePreMoneyChange(Number(e.target.value))}
+              className="font-mono"
+            />
+          </div>
+          <div className="mt-4">
+            <label className="block text-sm font-medium mb-2">Post-money Valuation ($)</label>
+            <Input
+              type="number"
+              min="0"
+              value={currentPostMoney || ''}
+              onChange={(e) => handlePostMoneyChange(Number(e.target.value))}
+              className="font-mono"
+            />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="isPostMoney"
+              checked={isPostMoney}
+              onCheckedChange={(checked) => setIsPostMoney(checked as boolean)}
+            />
+            <label htmlFor="isPostMoney" className="text-sm text-muted-foreground">
+              Use post-money valuation for calculations
+            </label>
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">Option Pool (%)</label>
