@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -103,44 +103,14 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
     },
   });
 
-  const updateOptionPoolMutation = useMutation({
-    mutationFn: async (size: number) => {
-      const response = await fetch("/api/option-pool", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ size: String(size) }),
-      });
-      if (!response.ok) throw new Error("Failed to update option pool");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["optionPool"] });
-      toast({
-        title: "Success",
-        description: "Option pool updated successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update option pool",
-        variant: "destructive",
-      });
-    },
-  });
-
   const calculateOwnership = (sharesOwned: string, includeInvestment: boolean = false) => {
     try {
       if (!shareholders?.length) return "0.00";
       
-      // Get total shares from all shareholders with null check
       const totalShares = shareholders.reduce((acc, s) => acc + Number(s?.sharesOwned || 0), 0);
-      
-      // Add option pool size to get total equity
       const optionPoolSize = optionPool?.size ? Number(optionPool.size || 0) : 0;
       let totalEquity = totalShares + optionPoolSize;
       
-      // If including investment impact, add new shares with proper checks
       if (includeInvestment && investment?.amount > 0 && investment?.preMoney > 0) {
         const newShares = calculateNewShares(investment.amount, investment.preMoney, totalShares);
         totalEquity += newShares || 0;
@@ -148,7 +118,6 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
       
       if (totalEquity <= 0) return "0.00";
       
-      // Calculate individual ownership with null check
       const ownership = (Number(sharesOwned || 0) / totalEquity) * 100;
       return isNaN(ownership) ? "0.00" : ownership.toFixed(2);
     } catch (error) {
@@ -180,7 +149,7 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
             <DialogHeader>
               <DialogTitle>Add New Shareholder</DialogTitle>
               <DialogDescription>
-                Enter the shareholder details below. Share counts can include decimals for fractional shares.
+                Enter the shareholder details below.
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -224,28 +193,15 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
               type="number"
               step="0.01"
               min="0"
-              defaultValue={optionPoolSize}
+              value={optionPoolSize}
               onChange={(e) => {
-                const value = e.target.value;
-                if (!isNaN(Number(value)) && Number(value) >= 0) {
-                  e.target.value = value;
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const value = Number(e.currentTarget.value);
-                  if (!isNaN(value) && value >= 0) {
-                    updateOptionPoolMutation.mutate(value);
-                  }
-                }
-              }}
-              onBlur={(e) => {
                 const value = Number(e.target.value);
                 if (!isNaN(value) && value >= 0) {
-                  updateOptionPoolMutation.mutate(value);
-                } else {
-                  // Reset to previous valid value if invalid input
-                  e.target.value = String(optionPoolSize);
+                  fetch("/api/option-pool", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ size: String(value) }),
+                  });
                 }
               }}
               className="w-32"
@@ -262,50 +218,72 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead className="text-right">Shares</TableHead>
-            <TableHead className="text-right">Ownership %</TableHead>
+            <TableHead className="text-right">Current Ownership</TableHead>
+            <TableHead className="text-right">Post-Investment</TableHead>
             <TableHead className="w-[100px]">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {shareholders?.map((shareholder) => (
-            <TableRow key={shareholder.id}>
-              <TableCell>{shareholder.name}</TableCell>
-              <TableCell className="text-right">
-                {Number(shareholder.sharesOwned).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="space-y-1">
-                  <div>{calculateOwnership(shareholder.sharesOwned)}%</div>
-                  {investment.amount > 0 && investment.preMoney > 0 && (
-                    <div className={`text-sm ${
-                      Number(calculateOwnership(shareholder.sharesOwned)) > 
-                      Number(calculateOwnership(shareholder.sharesOwned, true)) 
-                      ? 'text-destructive' 
-                      : 'text-muted-foreground'
+          {shareholders?.map((shareholder) => {
+            const currentOwnership = Number(calculateOwnership(shareholder.sharesOwned));
+            const postOwnership = Number(calculateOwnership(shareholder.sharesOwned, true));
+            const ownershipDiff = postOwnership - currentOwnership;
+            
+            return (
+              <TableRow key={shareholder.id}>
+                <TableCell>{shareholder.name}</TableCell>
+                <TableCell className="text-right font-mono">
+                  {Number(shareholder.sharesOwned).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </TableCell>
+                <TableCell className="text-right font-mono">
+                  {currentOwnership.toFixed(2)}%
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                    <span className={`font-mono ${
+                      ownershipDiff < 0 ? 'text-destructive' : 'text-muted-foreground'
                     }`}>
-                      → {calculateOwnership(shareholder.sharesOwned, true)}%
-                    </div>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    if (shareholder.id) {
-                      if (window.confirm(`Are you sure you want to delete ${shareholder.name}?`)) {
-                        deleteMutation.mutate(shareholder.id);
+                      {postOwnership.toFixed(2)}%
+                    </span>
+                    {ownershipDiff !== 0 && (
+                      <span className={`text-xs ${
+                        ownershipDiff < 0 ? 'text-destructive' : 'text-green-600'
+                      }`}>
+                        ({ownershipDiff > 0 ? '+' : ''}{ownershipDiff.toFixed(2)}%)
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      if (shareholder.id) {
+                        if (window.confirm(`Are you sure you want to delete ${shareholder.name}?`)) {
+                          deleteMutation.mutate(shareholder.id);
+                        }
                       }
-                    }
-                  }}
-                  disabled={deleteMutation.isPending}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+                    }}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+          <TableRow>
+            <TableCell colSpan={5} className="py-4">
+              <div className="text-sm text-muted-foreground">
+                Total Shares: {totalShares.toLocaleString()}
+              </div>
+            </TableCell>
+          </TableRow>
         </TableBody>
       </Table>
     </div>
