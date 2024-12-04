@@ -49,31 +49,54 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  registerRoutes(app);
-  const server = createServer(app);
+  try {
+    log("Initializing server...");
+    
+    // Register API routes
+    log("Registering API routes...");
+    registerRoutes(app);
+    
+    const server = createServer(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    // Global error handler
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      console.error('Server error:', err);
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      
+      log(`Error occurred: ${message} (${status})`);
+      res.status(status).json({ message });
+    });
 
-    res.status(status).json({ message });
-    throw err;
-  });
+    // Setup Vite or static serving based on environment
+    if (app.get("env") === "development") {
+      log("Setting up Vite development server...");
+      await setupVite(app, server);
+      log("Vite development server configured successfully");
+    } else {
+      log("Setting up static file serving...");
+      serveStatic(app);
+      log("Static file serving configured successfully");
+    }
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    // Start the server
+    const PORT = 5000;
+    server.listen(PORT, "0.0.0.0", () => {
+      log(`Server started successfully on port ${PORT}`);
+      log(`API and client both available at http://0.0.0.0:${PORT}`);
+    });
+
+    // Handle server errors
+    server.on('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'EADDRINUSE') {
+        log(`Error: Port ${PORT} is already in use`);
+      } else {
+        log(`Server error: ${error.message}`);
+      }
+      process.exit(1);
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error);
+    process.exit(1);
   }
-
-  // ALWAYS serve the app on port 3000
-  // this serves both the API and the client
-  const PORT = 3000;
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`serving on port ${PORT}`);
-    console.log(`Server running at http://0.0.0.0:${PORT}`);
-  });
 })();
