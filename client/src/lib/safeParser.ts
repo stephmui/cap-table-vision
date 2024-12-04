@@ -17,8 +17,8 @@ export function parseSAFEDocument(text: string): SAFETerms | null {
       return Number(cleaned.replace(/,/g, ''));
     };
 
-    // Extract investment amount with specific pattern
-    const investmentMatch = text.match(/(?:purchase\s+amount|investment\s+amount|purchase\s+price|agrees?\s+to\s+invest)[^\$]*\$\s*([\d,]+(?:\.\d{2})?)/i);
+    // Extract investment amount with SAFE template format
+    const investmentMatch = text.match(/payment\s+(?:by|of)\s+[^$]*\$\s*([\d,]+(?:\.\d{2})?)/i);
     const investmentAmount = investmentMatch ? parseNumber(investmentMatch[1]) : 0;
 
     // Detailed investment amount parsing debug
@@ -29,8 +29,8 @@ export function parseSAFEDocument(text: string): SAFETerms | null {
       parsedAmount: investmentMatch ? parseNumber(investmentMatch[1]) : null
     });
 
-    // Extract valuation cap with flexible pattern
-    const valCapMatch = text.match(/(?:valuation|cap|value).*?(\$\s*[\d,]+(?:\.\d{2})?|\d[\d,]*(?:\.\d{2})?)/i);
+    // Extract post-money valuation cap with specific pattern
+    const valCapMatch = text.match(/post-money\s+valuation\s+cap.*?\$\s*([\d,]+(?:\.\d{2})?)/i);
     const valuationCap = valCapMatch ? parseNumber(valCapMatch[1]) : 0;
 
     // Detailed debug logging
