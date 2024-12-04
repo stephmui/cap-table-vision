@@ -22,21 +22,20 @@ export default function TermSheetAnalyzer({
 }: TermSheetAnalyzerProps) {
   const totalShares = shareholders?.reduce((acc, s) => acc + Number(s.sharesOwned || 0), 0) ?? 0;
 
-  const handlePreMoneyChange = (value: number) => {
-    const postMoney = value + (investment.amount || 0);
-    onInvestmentChange({ ...investment, preMoney: value });
+  const handlePreMoneyChange = (value: string) => {
+    const numValue = value ? Number(value) : 0;
+    onInvestmentChange({ ...investment, preMoney: numValue });
   };
 
-  const handlePostMoneyChange = (value: number) => {
-    const preMoney = value - (investment.amount || 0);
+  const handlePostMoneyChange = (value: string) => {
+    const numValue = value ? Number(value) : 0;
+    const preMoney = numValue - (investment.amount || 0);
     onInvestmentChange({ ...investment, preMoney });
   };
 
-  const handleInvestmentAmountChange = (value: number) => {
-    onInvestmentChange({ 
-      ...investment, 
-      amount: value,
-    });
+  const handleInvestmentAmountChange = (value: string) => {
+    const numValue = value ? Number(value) : 0;
+    onInvestmentChange({ ...investment, amount: numValue });
   };
 
   const currentPostMoney = (investment.preMoney || 0) + (investment.amount || 0);
@@ -56,8 +55,8 @@ export default function TermSheetAnalyzer({
             <Input
               type="number"
               min="0"
-              value={investment.amount || ''}
-              onChange={(e) => handleInvestmentAmountChange(Number(e.target.value))}
+              value={investment.amount?.toString() || ''}
+              onChange={(e) => handleInvestmentAmountChange(e.target.value)}
               className="font-mono"
             />
           </div>
@@ -66,8 +65,8 @@ export default function TermSheetAnalyzer({
             <Input
               type="number"
               min="0"
-              value={investment.preMoney || ''}
-              onChange={(e) => handlePreMoneyChange(Number(e.target.value))}
+              value={investment.preMoney?.toString() || ''}
+              onChange={(e) => handlePreMoneyChange(e.target.value)}
               className="font-mono"
             />
           </div>
@@ -76,8 +75,8 @@ export default function TermSheetAnalyzer({
             <Input
               type="number"
               min="0"
-              value={currentPostMoney || ''}
-              onChange={(e) => handlePostMoneyChange(Number(e.target.value))}
+              value={currentPostMoney?.toString() || ''}
+              onChange={(e) => handlePostMoneyChange(e.target.value)}
               className="font-mono"
             />
           </div>
@@ -88,10 +87,10 @@ export default function TermSheetAnalyzer({
               type="number"
               min="0"
               max="100"
-              value={investment.optionPool || ''}
+              value={investment.optionPool?.toString() || ''}
               onChange={(e) => onInvestmentChange({ 
                 ...investment, 
-                optionPool: Number(e.target.value) 
+                optionPool: e.target.value ? Number(e.target.value) : 0
               })}
               className="font-mono"
             />
