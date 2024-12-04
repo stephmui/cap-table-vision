@@ -130,26 +130,31 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
   });
 
   const calculateOwnership = (sharesOwned: string, includeInvestment: boolean = false) => {
-    if (!shareholders?.length) return "0.00";
-    
-    // Get total shares from all shareholders
-    const totalShares = shareholders.reduce((acc, s) => acc + Number(s.sharesOwned), 0);
-    
-    // Add option pool size to get total equity
-    const optionPoolSize = optionPool?.size ? Number(optionPool.size) : 0;
-    let totalEquity = totalShares + optionPoolSize;
-    
-    // If including investment impact, add new shares
-    if (includeInvestment && investment.amount > 0 && investment.preMoney > 0) {
-      const newShares = calculateNewShares(investment.amount, investment.preMoney, totalShares);
-      totalEquity += newShares;
+    try {
+      if (!shareholders?.length) return "0.00";
+      
+      // Get total shares from all shareholders with null check
+      const totalShares = shareholders.reduce((acc, s) => acc + Number(s?.sharesOwned || 0), 0);
+      
+      // Add option pool size to get total equity
+      const optionPoolSize = optionPool?.size ? Number(optionPool.size || 0) : 0;
+      let totalEquity = totalShares + optionPoolSize;
+      
+      // If including investment impact, add new shares with proper checks
+      if (includeInvestment && investment?.amount > 0 && investment?.preMoney > 0) {
+        const newShares = calculateNewShares(investment.amount, investment.preMoney, totalShares);
+        totalEquity += newShares || 0;
+      }
+      
+      if (totalEquity <= 0) return "0.00";
+      
+      // Calculate individual ownership with null check
+      const ownership = (Number(sharesOwned || 0) / totalEquity) * 100;
+      return isNaN(ownership) ? "0.00" : ownership.toFixed(2);
+    } catch (error) {
+      console.error("Error calculating ownership:", error);
+      return "0.00";
     }
-    
-    if (totalEquity === 0) return "0.00";
-    
-    // Calculate individual ownership
-    const ownership = (Number(sharesOwned) / totalEquity) * 100;
-    return ownership.toFixed(2);
   };
 
   if (isLoading) {

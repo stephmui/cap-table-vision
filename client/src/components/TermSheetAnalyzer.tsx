@@ -20,9 +20,11 @@ export default function TermSheetAnalyzer({
   investment,
   onInvestmentChange,
 }: TermSheetAnalyzerProps) {
-  const totalShares = shareholders?.reduce((acc, s) => acc + Number(s.sharesOwned), 0) || 0;
-  const postMoney = calculatePostMoney(investment.preMoney, investment.amount);
-  const newShares = calculateNewShares(investment.amount, investment.preMoney, totalShares);
+  const totalShares = shareholders?.reduce((acc, s) => acc + Number(s.sharesOwned || 0), 0) ?? 0;
+  const postMoney = investment?.amount && investment?.preMoney ? 
+    calculatePostMoney(investment.preMoney, investment.amount) : 0;
+  const newShares = totalShares > 0 && investment?.amount && investment?.preMoney ? 
+    calculateNewShares(investment.amount, investment.preMoney, totalShares) : 0;
   const dilution = calculateDilution(totalShares, newShares);
   const newOwnership = calculateOwnershipPercentage(newShares, totalShares + newShares);
 
