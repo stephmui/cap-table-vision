@@ -8,29 +8,46 @@ type SAFETerms = {
 
 export function parseSAFEDocument(text: string): SAFETerms | null {
   try {
-    // Extract investment amount (looking for dollar amounts)
-    const investmentMatch = text.match(/\$\s*([\d,]+(\.\d{2})?)/);
-    const investmentAmount = investmentMatch 
-      ? Number(investmentMatch[1].replace(/,/g, ''))
-      : 0;
+    // Function to parse number strings with flexible format
+    const parseNumber = (str: string): number => {
+      if (!str) return 0;
+      // Remove all whitespace and commas, then convert to number
+      const cleanStr = str.replace(/[\s,]/g, '');
+      // Handle both integer and decimal formats
+      return Number(cleanStr.includes('.') ? cleanStr : cleanStr + '.00');
+    };
 
-    // Extract valuation cap
-    const valCapMatch = text.match(/valuation\s*cap\s*of\s*\$\s*([\d,]+(\.\d{2})?)/i);
-    const valuationCap = valCapMatch 
-      ? Number(valCapMatch[1].replace(/,/g, ''))
-      : 0;
+    // Extract investment amount with more comprehensive pattern
+    const investmentMatch = text.match(/(?:purchase amount|investment amount|amount|agrees to invest)[^\$]*\$\s*([\d,]+(?:\.\d{2})?)/i);
+    const investmentAmount = investmentMatch ? parseNumber(investmentMatch[1]) : 0;
 
-    // Extract discount rate (if present)
-    const discountMatch = text.match(/discount\s*(?:rate|of)\s*(\d+)%/i);
-    const discountRate = discountMatch 
-      ? Number(discountMatch[1])
-      : undefined;
+    // Extract valuation cap with more formats
+    const valCapMatch = text.match(/(?:valuation cap|cap|price cap)[^\$]*\$\s*([\d,]+(?:\.\d{2})?)/i);
+    const valuationCap = valCapMatch ? parseNumber(valCapMatch[1]) : 0;
 
-    // Check for MFN clause
-    const hasMFN = /most\s*favored\s*nation/i.test(text);
+    // Extract discount rate with more variations
+    const discountMatch = text.match(/(?:discount rate|discount|discount percentage)[^\d]*(\d+)%/i);
+    const discountRate = discountMatch ? Number(discountMatch[1]) : undefined;
 
-    // Check for pro-rata rights
-    const hasProRata = /pro[\s-]rata/i.test(text);
+    // Check for MFN clause (case insensitive)
+    const hasMFN = /most\s*favou?red\s*nation/i.test(text);
+
+    // Check for pro-rata rights (more flexible matching)
+    const hasProRata = /pro[\s-]*rata(?:\s+rights?)?/i.test(text);
+
+    // Debug logging for parsing attempts
+    console.log('Parsing attempts:', {
+      investmentMatch,
+      valCapMatch,
+      discountMatch,
+      parsedValues: {
+        investmentAmount,
+        valuationCap,
+        discountRate,
+        hasMFN,
+        hasProRata
+      }
+    });
 
     if (investmentAmount && valuationCap) {
       return {
