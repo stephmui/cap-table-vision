@@ -17,13 +17,19 @@ export function parseSAFEDocument(text: string): SAFETerms | null {
       return Number(cleanStr.includes('.') ? cleanStr : cleanStr + '.00');
     };
 
-    // Extract investment amount with more comprehensive pattern
-    const investmentMatch = text.match(/(?:purchase amount|investment amount|amount|agrees to invest)[^\$]*\$\s*([\d,]+(?:\.\d{2})?)/i);
+    // Extract investment amount with specific pattern
+    const investmentMatch = text.match(/(?:purchase\s+amount|investment\s+amount)[\s:]*\$\s*([\d,]+(?:\.\d{2})?)/i);
     const investmentAmount = investmentMatch ? parseNumber(investmentMatch[1]) : 0;
 
-    // Extract valuation cap with more formats
-    const valCapMatch = text.match(/(?:valuation cap|cap|price cap)[^\$]*\$\s*([\d,]+(?:\.\d{2})?)/i);
+    // Extract post-money valuation cap
+    const valCapMatch = text.match(/(?:post-money\s+valuation\s+cap|valuation\s+cap)[\s:]*\$\s*([\d,]+(?:\.\d{2})?)/i);
     const valuationCap = valCapMatch ? parseNumber(valCapMatch[1]) : 0;
+
+    // Debug logging for raw matches
+    console.log('Raw matches:', {
+      investmentText: investmentMatch?.[0],
+      valuationText: valCapMatch?.[0]
+    });
 
     // Extract discount rate with more variations
     const discountMatch = text.match(/(?:discount rate|discount|discount percentage)[^\d]*(\d+)%/i);
