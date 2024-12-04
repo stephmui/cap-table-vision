@@ -18,7 +18,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 import { type Investment } from "@/pages/CapTable";
-import { calculateDilution, calculateOwnershipPercentage } from "@/lib/calculations";
+import { calculateNewShares, calculateDilution, calculateOwnershipPercentage } from "@/lib/calculations";
 
 interface ShareholderTableProps {
   shareholders?: Shareholder[];
