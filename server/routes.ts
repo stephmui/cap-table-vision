@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { db } from "../db";
-import { shareholders, investments } from "@db/schema";
+import { shareholders, investments, optionPool } from "@db/schema";
 import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express) {
@@ -46,6 +46,26 @@ export function registerRoutes(app: Express) {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete shareholder" });
+    }
+  });
+  app.get("/api/option-pool", async (_, res) => {
+    try {
+      const results = await db.select().from(optionPool).limit(1);
+      res.json(results[0]);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch option pool" });
+    }
+  });
+
+  app.put("/api/option-pool", async (req, res) => {
+    try {
+      const result = await db
+        .update(optionPool)
+        .set({ size: req.body.size, lastUpdated: new Date() })
+        .returning();
+      res.json(result[0]);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update option pool" });
     }
   });
 }

@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { insertShareholderSchema, type InsertShareholder, type Shareholder } from "@db/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 interface ShareholderTableProps {
@@ -25,12 +25,22 @@ interface ShareholderTableProps {
 export default function ShareholderTable({ shareholders, isLoading }: ShareholderTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Fetch option pool data
+  const { data: optionPool } = useQuery({
+    queryKey: ["optionPool"],
+    queryFn: async () => {
+      const response = await fetch("/api/option-pool");
+      if (!response.ok) throw new Error("Failed to fetch option pool");
+      return response.json();
+    },
+  });
+
   const form = useForm<InsertShareholder>({
     resolver: zodResolver(insertShareholderSchema),
     defaultValues: {
       name: "",
       sharesOwned: "0",
-      optionsGranted: "0",
       shareClass: "common",
     },
   });
@@ -43,7 +53,6 @@ export default function ShareholderTable({ shareholders, isLoading }: Shareholde
         body: JSON.stringify({
           ...data,
           sharesOwned: String(data.sharesOwned),
-          optionsGranted: String(data.optionsGranted),
         }),
       });
       if (!response.ok) throw new Error("Failed to add shareholder");
@@ -90,16 +99,42 @@ export default function ShareholderTable({ shareholders, isLoading }: Shareholde
     },
   });
 
-  const calculateOwnership = (shareholder: Shareholder) => {
+  const updateOptionPoolMutation = useMutation({
+    mutationFn: async (size: number) => {
+      const response = await fetch("/api/option-pool", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ size: String(size) }),
+      });
+      if (!response.ok) throw new Error("Failed to update option pool");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["optionPool"] });
+      toast({
+        title: "Success",
+        description: "Option pool updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update option pool",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const calculateOwnership = (sharesOwned: string) => {
     if (!shareholders?.length) return "0.00";
     
-    const totalEquity = shareholders.reduce((acc, s) => 
-      acc + Number(s.sharesOwned) + Number(s.optionsGranted), 0
-    );
+    const totalShares = shareholders.reduce((acc, s) => acc + Number(s.sharesOwned), 0);
+    const optionPoolSize = optionPool?.size ? Number(optionPool.size) : 0;
+    const totalEquity = totalShares + optionPoolSize;
     
     if (totalEquity === 0) return "0.00";
     
-    const ownership = ((Number(shareholder.sharesOwned) + Number(shareholder.optionsGranted)) / totalEquity) * 100;
+    const ownership = (Number(sharesOwned) / totalEquity) * 100;
     return ownership.toFixed(2);
   };
 
@@ -107,10 +142,14 @@ export default function ShareholderTable({ shareholders, isLoading }: Shareholde
     return <div>Loading...</div>;
   }
 
+  const totalShares = shareholders?.reduce((acc, s) => acc + Number(s.sharesOwned), 0) || 0;
+  const optionPoolSize = optionPool?.size ? Number(optionPool.size) : 0;
+  const optionPoolPercentage = totalShares > 0 ? (optionPoolSize / (totalShares + optionPoolSize)) * 100 : 0;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Shareholders</h2>
+        <h2 className="text-lg font-semibold">Cap Table</h2>
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
@@ -145,16 +184,6 @@ export default function ShareholderTable({ shareholders, isLoading }: Shareholde
                       placeholder="0.00"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label>Options Granted</label>
-                    <Input 
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      {...form.register("optionsGranted")}
-                      placeholder="0.00"
-                    />
-                  </div>
                   <Button 
                     type="submit" 
                     disabled={addMutation.isPending}
@@ -168,12 +197,30 @@ export default function ShareholderTable({ shareholders, isLoading }: Shareholde
         </Dialog>
       </div>
 
+      <div className="mb-6 p-4 border rounded-lg bg-muted/50">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-medium">Option Pool</h3>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={optionPoolSize}
+              onChange={(e) => updateOptionPoolMutation.mutate(Number(e.target.value))}
+              className="w-32"
+            />
+            <span className="text-sm text-muted-foreground">
+              ({optionPoolPercentage.toFixed(2)}% of total)
+            </span>
+          </div>
+        </div>
+      </div>
+
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead className="text-right">Shares</TableHead>
-            <TableHead className="text-right">Options</TableHead>
             <TableHead className="text-right">Ownership %</TableHead>
             <TableHead className="w-[100px]">Actions</TableHead>
           </TableRow>
@@ -185,10 +232,7 @@ export default function ShareholderTable({ shareholders, isLoading }: Shareholde
               <TableCell className="text-right">
                 {Number(shareholder.sharesOwned).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </TableCell>
-              <TableCell className="text-right">
-                {Number(shareholder.optionsGranted).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </TableCell>
-              <TableCell className="text-right">{calculateOwnership(shareholder)}%</TableCell>
+              <TableCell className="text-right">{calculateOwnership(shareholder.sharesOwned)}%</TableCell>
               <TableCell>
                 <Button
                   variant="destructive"

@@ -6,9 +6,14 @@ export const shareholders = pgTable("shareholders", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   name: text("name").notNull(),
   sharesOwned: decimal("shares_owned", { precision: 15, scale: 2 }).notNull(),
-  optionsGranted: decimal("options_granted", { precision: 15, scale: 2 }).default("0"),
   shareClass: text("share_class").default("common"),
   dateAdded: timestamp("date_added").defaultNow()
+});
+
+export const optionPool = pgTable("option_pool", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  size: decimal("size", { precision: 15, scale: 2 }).notNull().default("0"),
+  lastUpdated: timestamp("last_updated").defaultNow()
 });
 
 export const investments = pgTable("investments", {
