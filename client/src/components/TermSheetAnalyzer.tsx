@@ -1,76 +1,114 @@
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { calculatePostMoney, calculateNewShares } from "../lib/calculations";
+import { type Investment } from "@/pages/CapTable";
+import { 
+  calculatePostMoney, 
+  calculateNewShares, 
+  calculateOwnershipPercentage,
+  calculateDilution 
+} from "../lib/calculations";
 
 interface TermSheetAnalyzerProps {
   shareholders?: any[];
+  investment: Investment;
+  onInvestmentChange: (investment: Investment) => void;
 }
 
-export default function TermSheetAnalyzer({ shareholders }: TermSheetAnalyzerProps) {
-  const [investment, setInvestment] = useState({
-    amount: 0,
-    preMoney: 0,
-    optionPool: 0,
-  });
-
-  const totalShares = shareholders?.reduce((acc, s) => acc + s.sharesOwned, 0) || 0;
+export default function TermSheetAnalyzer({ 
+  shareholders,
+  investment,
+  onInvestmentChange,
+}: TermSheetAnalyzerProps) {
+  const totalShares = shareholders?.reduce((acc, s) => acc + Number(s.sharesOwned), 0) || 0;
   const postMoney = calculatePostMoney(investment.preMoney, investment.amount);
   const newShares = calculateNewShares(investment.amount, investment.preMoney, totalShares);
+  const dilution = calculateDilution(totalShares, newShares);
+  const newOwnership = calculateOwnershipPercentage(newShares, totalShares + newShares);
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <Card className="p-6">
-        <h3 className="mb-4 text-lg font-semibold">Investment Terms</h3>
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Investment Terms</h3>
         <div className="space-y-4">
           <div>
-            <label className="block mb-2">Investment Amount ($)</label>
+            <label className="block text-sm font-medium mb-2">Investment Amount ($)</label>
             <Input
               type="number"
-              value={investment.amount}
-              onChange={(e) => setInvestment({ ...investment, amount: Number(e.target.value) })}
+              min="0"
+              value={investment.amount || ''}
+              onChange={(e) => onInvestmentChange({ 
+                ...investment, 
+                amount: Number(e.target.value) 
+              })}
+              className="font-mono"
             />
           </div>
           <div>
-            <label className="block mb-2">Pre-money Valuation ($)</label>
+            <label className="block text-sm font-medium mb-2">Pre-money Valuation ($)</label>
             <Input
               type="number"
-              value={investment.preMoney}
-              onChange={(e) => setInvestment({ ...investment, preMoney: Number(e.target.value) })}
+              min="0"
+              value={investment.preMoney || ''}
+              onChange={(e) => onInvestmentChange({ 
+                ...investment, 
+                preMoney: Number(e.target.value) 
+              })}
+              className="font-mono"
             />
           </div>
           <div>
-            <label className="block mb-2">Option Pool (%)</label>
+            <label className="block text-sm font-medium mb-2">Option Pool (%)</label>
             <Input
               type="number"
-              value={investment.optionPool}
-              onChange={(e) => setInvestment({ ...investment, optionPool: Number(e.target.value) })}
+              min="0"
+              max="100"
+              value={investment.optionPool || ''}
+              onChange={(e) => onInvestmentChange({ 
+                ...investment, 
+                optionPool: Number(e.target.value) 
+              })}
+              className="font-mono"
             />
           </div>
-          <Button className="w-full">Calculate Impact</Button>
         </div>
-      </Card>
+      </div>
 
-      <Card className="p-6">
-        <h3 className="mb-4 text-lg font-semibold">Analysis Results</h3>
+      <div className="border-t pt-6">
+        <h3 className="text-lg font-semibold mb-4">Analysis Results</h3>
         <div className="space-y-4">
           <div>
-            <label className="block mb-2">Post-money Valuation</label>
-            <div className="p-2 border rounded bg-muted">${postMoney.toLocaleString()}</div>
+            <label className="block text-sm font-medium mb-2">Post-money Valuation</label>
+            <div className="p-2 border rounded bg-muted font-mono">
+              ${postMoney.toLocaleString()}
+            </div>
           </div>
           <div>
-            <label className="block mb-2">New Shares Issued</label>
-            <div className="p-2 border rounded bg-muted">{newShares.toLocaleString()}</div>
+            <label className="block text-sm font-medium mb-2">New Shares Issued</label>
+            <div className="p-2 border rounded bg-muted font-mono">
+              {newShares.toLocaleString()}
+            </div>
           </div>
           <div>
-            <label className="block mb-2">Price Per Share</label>
-            <div className="p-2 border rounded bg-muted">
-              ${(investment.preMoney / totalShares).toFixed(2)}
+            <label className="block text-sm font-medium mb-2">Price Per Share</label>
+            <div className="p-2 border rounded bg-muted font-mono">
+              ${(investment.preMoney / totalShares || 0).toFixed(2)}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Dilution</label>
+            <div className="p-2 border rounded bg-muted font-mono">
+              {dilution.toFixed(2)}%
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">New Investor Ownership</label>
+            <div className="p-2 border rounded bg-muted font-mono">
+              {newOwnership.toFixed(2)}%
             </div>
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

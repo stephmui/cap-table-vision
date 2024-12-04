@@ -1,9 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import ShareholderTable from "@/components/ShareholderTable";
 import TermSheetAnalyzer from "@/components/TermSheetAnalyzer";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
+
+export interface Investment {
+  amount: number;
+  preMoney: number;
+  optionPool: number;
+}
 
 export default function CapTablePage() {
+  const [investment, setInvestment] = useState<Investment>({
+    amount: 0,
+    preMoney: 0,
+    optionPool: 0,
+  });
+
   const { data: shareholders, isLoading } = useQuery({
     queryKey: ["shareholders"],
     queryFn: async () => {
@@ -17,20 +30,23 @@ export default function CapTablePage() {
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-8">Cap Table Calculator</h1>
       
-      <Tabs defaultValue="cap-table" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="cap-table">Cap Table</TabsTrigger>
-          <TabsTrigger value="term-sheet">Term Sheet</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="cap-table" className="space-y-4">
-          <ShareholderTable shareholders={shareholders} isLoading={isLoading} />
-        </TabsContent>
-        
-        <TabsContent value="term-sheet" className="space-y-4">
-          <TermSheetAnalyzer shareholders={shareholders} />
-        </TabsContent>
-      </Tabs>
+      <div className="grid gap-8 lg:grid-cols-[1fr_2fr]">
+        <Card className="p-6 lg:sticky lg:top-8 h-fit">
+          <TermSheetAnalyzer 
+            shareholders={shareholders}
+            investment={investment}
+            onInvestmentChange={setInvestment}
+          />
+        </Card>
+
+        <div>
+          <ShareholderTable 
+            shareholders={shareholders} 
+            isLoading={isLoading}
+            investment={investment}
+          />
+        </div>
+      </div>
     </div>
   );
 }

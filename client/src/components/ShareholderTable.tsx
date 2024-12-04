@@ -17,12 +17,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
+import { type Investment } from "@/pages/CapTable";
+import { calculateDilution, calculateOwnershipPercentage } from "@/lib/calculations";
+
 interface ShareholderTableProps {
   shareholders?: Shareholder[];
   isLoading: boolean;
+  investment: Investment;
 }
 
-export default function ShareholderTable({ shareholders, isLoading }: ShareholderTableProps) {
+export default function ShareholderTable({ shareholders, isLoading, investment }: ShareholderTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -125,7 +129,7 @@ export default function ShareholderTable({ shareholders, isLoading }: Shareholde
     },
   });
 
-  const calculateOwnership = (sharesOwned: string) => {
+  const calculateOwnership = (sharesOwned: string, includeInvestment: boolean = false) => {
     if (!shareholders?.length) return "0.00";
     
     // Get total shares from all shareholders
@@ -133,11 +137,17 @@ export default function ShareholderTable({ shareholders, isLoading }: Shareholde
     
     // Add option pool size to get total equity
     const optionPoolSize = optionPool?.size ? Number(optionPool.size) : 0;
-    const totalEquity = totalShares + optionPoolSize;
+    let totalEquity = totalShares + optionPoolSize;
+    
+    // If including investment impact, add new shares
+    if (includeInvestment && investment.amount > 0 && investment.preMoney > 0) {
+      const newShares = calculateNewShares(investment.amount, investment.preMoney, totalShares);
+      totalEquity += newShares;
+    }
     
     if (totalEquity === 0) return "0.00";
     
-    // Calculate individual ownership as (shareholder shares / total equity) * 100
+    // Calculate individual ownership
     const ownership = (Number(sharesOwned) / totalEquity) * 100;
     return ownership.toFixed(2);
   };
@@ -258,7 +268,21 @@ export default function ShareholderTable({ shareholders, isLoading }: Shareholde
               <TableCell className="text-right">
                 {Number(shareholder.sharesOwned).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </TableCell>
-              <TableCell className="text-right">{calculateOwnership(shareholder.sharesOwned)}%</TableCell>
+              <TableCell className="text-right">
+                <div className="space-y-1">
+                  <div>{calculateOwnership(shareholder.sharesOwned)}%</div>
+                  {investment.amount > 0 && investment.preMoney > 0 && (
+                    <div className={`text-sm ${
+                      Number(calculateOwnership(shareholder.sharesOwned)) > 
+                      Number(calculateOwnership(shareholder.sharesOwned, true)) 
+                      ? 'text-destructive' 
+                      : 'text-muted-foreground'
+                    }`}>
+                      → {calculateOwnership(shareholder.sharesOwned, true)}%
+                    </div>
+                  )}
+                </div>
+              </TableCell>
               <TableCell>
                 <Button
                   variant="destructive"
