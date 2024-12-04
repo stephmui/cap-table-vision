@@ -47,14 +47,14 @@ export default function TermSheetAnalyzer({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Pre-money Valuation ($)</label>
+            <label className="block text-sm font-medium mb-2">Post-money Valuation ($)</label>
             <Input
               type="number"
               min="0"
               value={investment.preMoney || ''}
               onChange={(e) => onInvestmentChange({ 
                 ...investment, 
-                preMoney: Number(e.target.value) 
+                preMoney: Number(e.target.value) - (investment.amount || 0) // Convert post-money to pre-money
               })}
               className="font-mono"
             />
