@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { type Investment } from "@/pages/CapTable";
 import { 
   calculatePostMoney, 
@@ -22,16 +20,23 @@ export default function TermSheetAnalyzer({
   investment,
   onInvestmentChange,
 }: TermSheetAnalyzerProps) {
-  const [isPostMoney, setIsPostMoney] = useState(true);
   const totalShares = shareholders?.reduce((acc, s) => acc + Number(s.sharesOwned || 0), 0) ?? 0;
 
   const handlePreMoneyChange = (value: number) => {
+    const postMoney = value + (investment.amount || 0);
     onInvestmentChange({ ...investment, preMoney: value });
   };
 
   const handlePostMoneyChange = (value: number) => {
     const preMoney = value - (investment.amount || 0);
     onInvestmentChange({ ...investment, preMoney });
+  };
+
+  const handleInvestmentAmountChange = (value: number) => {
+    onInvestmentChange({ 
+      ...investment, 
+      amount: value,
+    });
   };
 
   const currentPostMoney = (investment.preMoney || 0) + (investment.amount || 0);
@@ -52,10 +57,7 @@ export default function TermSheetAnalyzer({
               type="number"
               min="0"
               value={investment.amount || ''}
-              onChange={(e) => onInvestmentChange({ 
-                ...investment, 
-                amount: Number(e.target.value) 
-              })}
+              onChange={(e) => handleInvestmentAmountChange(Number(e.target.value))}
               className="font-mono"
             />
           </div>
@@ -79,16 +81,7 @@ export default function TermSheetAnalyzer({
               className="font-mono"
             />
           </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="isPostMoney"
-              checked={isPostMoney}
-              onCheckedChange={(checked) => setIsPostMoney(checked as boolean)}
-            />
-            <label htmlFor="isPostMoney" className="text-sm text-muted-foreground">
-              Use post-money valuation for calculations
-            </label>
-          </div>
+          
           <div>
             <label className="block text-sm font-medium mb-2">Option Pool (%)</label>
             <Input
