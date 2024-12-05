@@ -29,8 +29,11 @@ export default function TermSheetAnalyzer({
 
   const handlePostMoneyChange = (value: string) => {
     const numValue = value ? Number(value) : 0;
-    const preMoney = numValue - (investment.amount || 0);
-    onInvestmentChange({ ...investment, preMoney });
+    // Only update if there's an actual change
+    if (numValue !== (investment.preMoney || 0) + (investment.amount || 0)) {
+      const preMoney = Math.max(0, numValue - (investment.amount || 0));
+      onInvestmentChange({ ...investment, preMoney });
+    }
   };
 
   const handleInvestmentAmountChange = (value: string) => {

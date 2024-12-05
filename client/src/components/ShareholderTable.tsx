@@ -309,7 +309,7 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
                   <div className="flex items-center justify-end gap-2">
                     <ArrowRight className="w-4 h-4 text-muted-foreground" />
                     <span className="font-mono text-muted-foreground">
-                      {optionPoolPercentage.toFixed(2)}%
+                      {calculateOwnership(String(optionPoolSize), true)}%
                     </span>
                   </div>
                 </TableCell>
