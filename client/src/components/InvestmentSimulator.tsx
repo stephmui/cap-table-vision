@@ -42,7 +42,17 @@ interface InvestmentSimulatorProps {
 
 export default function InvestmentSimulator({ shareholders }: InvestmentSimulatorProps) {
   const queryClient = useQueryClient();
-  const { data: savedRounds, isLoading: isLoadingRounds } = useQuery({
+  interface SavedRound {
+    id: number;
+    type: "SAFE" | "EQUITY" | "CONVERTIBLE";
+    amount: string;
+    valuation_cap: string;
+    discount_rate: string | null;
+    round_number: number;
+    date_added: string;
+  }
+
+  const { data: savedRounds, isLoading: isLoadingRounds } = useQuery<SavedRound[]>({
     queryKey: ["investmentRounds"],
     queryFn: async () => {
       const response = await fetch("/api/investment-rounds");
