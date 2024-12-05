@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Calculator } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import OwnershipChart from "./OwnershipChart";
 import { 
   calculatePostMoney, 
@@ -40,15 +41,37 @@ interface InvestmentSimulatorProps {
 }
 
 export default function InvestmentSimulator({ shareholders }: InvestmentSimulatorProps) {
-  const [rounds, setRounds] = useState<InvestmentRound[]>([
-    { 
-      id: "round-1",
-      type: "SAFE", 
-      amount: 0, 
-      valCap: 0, 
-      discount: 0 
+  const queryClient = useQueryClient();
+  const { data: savedRounds, isLoading: isLoadingRounds } = useQuery({
+    queryKey: ["investmentRounds"],
+    queryFn: async () => {
+      const response = await fetch("/api/investment-rounds");
+      if (!response.ok) throw new Error("Failed to fetch investment rounds");
+      return response.json();
+    },
+  });
+
+  const [rounds, setRounds] = useState<InvestmentRound[]>([]);
+
+  useEffect(() => {
+    if (savedRounds?.length > 0) {
+      setRounds(savedRounds.map(round => ({
+        id: String(round.id),
+        type: round.type,
+        amount: Number(round.amount),
+        valCap: Number(round.valuation_cap),
+        discount: round.discount_rate ? Number(round.discount_rate) : undefined
+      })));
+    } else {
+      setRounds([{ 
+        id: "round-1",
+        type: "SAFE", 
+        amount: 0, 
+        valCap: 0, 
+        discount: 0 
+      }]);
     }
-  ]);
+  }, [savedRounds]);
 
   const totalShares = useMemo(() => {
     return shareholders?.reduce((acc, s) => acc + Number(s.sharesOwned || 0), 0) || 0;
@@ -106,19 +129,53 @@ export default function InvestmentSimulator({ shareholders }: InvestmentSimulato
     return results;
   }, [rounds, totalShares]);
 
+  const addRoundMutation = useMutation({
+    mutationFn: async (round: Omit<InvestmentRound, "id">) => {
+      const response = await fetch("/api/investment-rounds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: round.type,
+          amount: round.amount,
+          valuation_cap: round.valCap,
+          discount_rate: round.discount,
+          round_number: rounds.length + 1
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to add investment round");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["investmentRounds"] });
+    },
+  });
+
   const addRound = () => {
-    const newRoundId = `round-${rounds.length + 1}`;
-    setRounds([...rounds, { 
-      id: newRoundId,
+    addRoundMutation.mutate({ 
       type: "SAFE", 
       amount: 0, 
       valCap: 0, 
       discount: 0 
-    }]);
+    });
   };
 
-  const removeRound = (index: number) => {
-    setRounds(rounds.filter((_, i) => i !== index));
+  const deleteRoundMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/investment-rounds/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete investment round");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["investmentRounds"] });
+    },
+  });
+
+  const removeRound = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this investment round?")) {
+      await deleteRoundMutation.mutate(Number(id));
+    }
   };
 
   return (
@@ -146,7 +203,7 @@ export default function InvestmentSimulator({ shareholders }: InvestmentSimulato
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => removeRound(index)}
+                    onClick={() => removeRound(round.id)}
                     className="text-destructive"
                   >
                     <Trash2 className="w-4 h-4" />

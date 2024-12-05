@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { db } from "../db";
-import { shareholders, investments, optionPool } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { shareholders, investments, optionPool, investmentRounds } from "@db/schema";
+import { eq, desc } from "drizzle-orm";
 
 export function registerRoutes(app: Express) {
   app.get("/api/shareholders", async (_, res) => {
@@ -66,6 +66,36 @@ export function registerRoutes(app: Express) {
       res.json(result[0]);
     } catch (error) {
       res.status(500).json({ error: "Failed to update option pool" });
+    }
+  });
+
+  // Investment Rounds endpoints
+  app.get("/api/investment-rounds", async (_, res) => {
+    try {
+      const results = await db.select()
+        .from(investmentRounds)
+        .orderBy(desc(investmentRounds.round_number));
+      res.json(results);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch investment rounds" });
+    }
+  });
+
+  app.post("/api/investment-rounds", async (req, res) => {
+    try {
+      const result = await db.insert(investmentRounds).values(req.body).returning();
+      res.json(result[0]);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to add investment round" });
+    }
+  });
+
+  app.delete("/api/investment-rounds/:id", async (req, res) => {
+    try {
+      await db.delete(investmentRounds).where(eq(investmentRounds.id, parseInt(req.params.id)));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete investment round" });
     }
   });
 }

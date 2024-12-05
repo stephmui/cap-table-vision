@@ -30,6 +30,10 @@ author = "agent"
 task = "workflow.run"
 args = "Cap Table Calculator"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Update Schema"
+
 [[workflows.workflow]]
 name = "Cap Table Calculator"
 author = "agent"
@@ -44,3 +48,17 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Update Schema"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run db:push"
