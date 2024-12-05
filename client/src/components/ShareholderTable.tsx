@@ -40,6 +40,32 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
     },
   });
 
+  const updateOptionPoolMutation = useMutation({
+    mutationFn: async (size: string) => {
+      const response = await fetch("/api/option-pool", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ size }),
+      });
+      if (!response.ok) throw new Error("Failed to update option pool");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["optionPool"] });
+      toast({
+        title: "Success",
+        description: "Option pool size updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update option pool",
+        variant: "destructive",
+      });
+    },
+  });
+
   const form = useForm<InsertShareholder>({
     resolver: zodResolver(insertShareholderSchema),
     defaultValues: {
@@ -285,21 +311,19 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
                 <TableCell>Option Pool</TableCell>
                 <TableCell className="text-right font-mono">
                   <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={optionPoolSize}
+                    type="text"
+                    value={optionPoolSize.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                     onChange={(e) => {
-                      const value = Number(e.target.value);
+                      const raw = e.target.value.replace(/,/g, '');
+                      const value = Number(raw);
                       if (!isNaN(value) && value >= 0) {
-                        fetch("/api/option-pool", {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ size: String(value) }),
-                        });
+                        updateOptionPoolMutation.mutate(String(value));
                       }
                     }}
-                    className="w-32 text-right"
+                    className="w-32 text-right font-mono"
                   />
                 </TableCell>
                 <TableCell className="text-right font-mono">
