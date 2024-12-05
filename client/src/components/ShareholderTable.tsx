@@ -110,13 +110,21 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
       const totalShares = shareholders.reduce((acc, s) => acc + Number(s?.sharesOwned || 0), 0);
       const optionPoolSize = optionPool?.size ? Number(optionPool.size || 0) : 0;
       let totalEquity = totalShares + optionPoolSize;
+      let newInvestorShares = 0;
       
       if (includeInvestment && investment?.amount > 0 && investment?.preMoney > 0) {
-        const newShares = calculateNewShares(investment.amount, investment.preMoney, totalShares);
-        totalEquity += newShares || 0;
+        newInvestorShares = calculateNewShares(investment.amount, investment.preMoney, totalEquity);
+        totalEquity += newInvestorShares;
       }
       
       if (totalEquity <= 0) return "0.00";
+      
+      // If calculating for option pool, adjust shares owned based on new total
+      if (sharesOwned === optionPool?.size) {
+        const newOptionPoolShares = (Number(optionPool.size) / totalShares) * totalEquity;
+        const ownership = (newOptionPoolShares / totalEquity) * 100;
+        return isNaN(ownership) ? "0.00" : ownership.toFixed(2);
+      }
       
       const ownership = (Number(sharesOwned || 0) / totalEquity) * 100;
       return isNaN(ownership) ? "0.00" : ownership.toFixed(2);
@@ -199,6 +207,7 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
         </TableHeader>
         <TableBody>
           {[
+            // Existing shareholders
             ...(shareholders || []).map((shareholder) => {
               const currentOwnership = Number(calculateOwnership(shareholder.sharesOwned));
               const postOwnership = Number(calculateOwnership(shareholder.sharesOwned, true));
@@ -252,6 +261,30 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
                 </TableRow>
               );
             }),
+            // New investor row when there's an investment
+            investment?.amount > 0 && investment?.preMoney > 0 && (
+              <TableRow key="new-investor">
+                <TableCell>New Investor</TableCell>
+                <TableCell className="text-right font-mono">
+                  {Math.round(calculateNewShares(investment.amount, investment.preMoney, totalShares)).toLocaleString()}
+                </TableCell>
+                <TableCell className="text-right font-mono">
+                  0.00%
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-mono text-success">
+                      {calculateOwnershipPercentage(
+                        calculateNewShares(investment.amount, investment.preMoney, totalShares),
+                        totalShares + calculateNewShares(investment.amount, investment.preMoney, totalShares)
+                      ).toFixed(2)}%
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell></TableCell>
+              </TableRow>
+            ),
             // Add Option Pool as a table row
             optionPool && (
               <TableRow key="option-pool">
