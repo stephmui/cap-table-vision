@@ -109,24 +109,18 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
       
       const totalShares = shareholders.reduce((acc, s) => acc + Number(s?.sharesOwned || 0), 0);
       const optionPoolSize = optionPool?.size ? Number(optionPool.size || 0) : 0;
-      let totalEquity = totalShares + optionPoolSize;
-      let newInvestorShares = 0;
+      const initialTotalEquity = totalShares + optionPoolSize;
       
       if (includeInvestment && investment?.amount > 0 && investment?.preMoney > 0) {
-        newInvestorShares = calculateNewShares(investment.amount, investment.preMoney, totalEquity);
-        totalEquity += newInvestorShares;
-      }
-      
-      if (totalEquity <= 0) return "0.00";
-      
-      // If calculating for option pool, adjust shares owned based on new total
-      if (sharesOwned === optionPool?.size) {
-        const newOptionPoolShares = (Number(optionPool.size) / totalShares) * totalEquity;
-        const ownership = (newOptionPoolShares / totalEquity) * 100;
+        const newInvestorShares = calculateNewShares(investment.amount, investment.preMoney, initialTotalEquity);
+        const totalEquity = initialTotalEquity + newInvestorShares;
+        const ownership = (Number(sharesOwned || 0) / totalEquity) * 100;
         return isNaN(ownership) ? "0.00" : ownership.toFixed(2);
       }
       
-      const ownership = (Number(sharesOwned || 0) / totalEquity) * 100;
+      // For current ownership (without investment)
+      if (initialTotalEquity <= 0) return "0.00";
+      const ownership = (Number(sharesOwned || 0) / initialTotalEquity) * 100;
       return isNaN(ownership) ? "0.00" : ownership.toFixed(2);
     } catch (error) {
       console.error("Error calculating ownership:", error);
