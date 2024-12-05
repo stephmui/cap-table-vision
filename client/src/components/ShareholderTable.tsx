@@ -312,21 +312,19 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
                 <TableCell className="text-right font-mono">
                   <Input
                     type="text"
-                    value={optionPoolSize.toLocaleString(undefined, {
+                    defaultValue={optionPoolSize.toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
                     onChange={(e) => {
-                      const raw = e.target.value.replace(/,/g, '');
-                      const value = Number(raw);
-                      if (!isNaN(value) && value >= 0) {
-                        updateOptionPoolMutation.mutate(String(value));
-                      }
+                      let value = e.target.value.replace(/[^\d.]/g, '');
+                      e.target.value = value;
                     }}
                     onBlur={(e) => {
                       const raw = e.target.value.replace(/,/g, '');
                       const value = Number(raw);
                       if (!isNaN(value) && value >= 0) {
+                        updateOptionPoolMutation.mutate(String(value));
                         e.target.value = value.toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
