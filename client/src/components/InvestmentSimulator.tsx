@@ -1,17 +1,29 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Calculator } from "lucide-react";
 import OwnershipChart from "./OwnershipChart";
-import { calculatePostMoney, calculateNewShares, calculateDilution, calculateOwnershipPercentage } from "@/lib/calculations";
+import { 
+  calculatePostMoney, 
+  calculateNewShares, 
+  calculateDilution, 
+  calculateOwnershipPercentage,
+  calculatePricePerShare 
+} from "@/lib/calculations";
 
 interface InvestmentRound {
+  id: string;
   type: "SAFE" | "EQUITY" | "CONVERTIBLE";
   amount: number;
   valCap: number;
   discount?: number;
+  pricePerShare?: number;
+  newShares?: number;
+  postMoneyValuation?: number;
+  roundDilution?: number;
+  newOwnership?: number;
 }
 
 interface InvestmentSimulatorProps {
@@ -20,51 +32,84 @@ interface InvestmentSimulatorProps {
 
 export default function InvestmentSimulator({ shareholders }: InvestmentSimulatorProps) {
   const [rounds, setRounds] = useState<InvestmentRound[]>([
-    { type: "SAFE", amount: 0, valCap: 0, discount: 0 }
+    { 
+      id: "round-1",
+      type: "SAFE", 
+      amount: 0, 
+      valCap: 0, 
+      discount: 0 
+    }
   ]);
 
   const totalShares = useMemo(() => {
     return shareholders?.reduce((acc, s) => acc + Number(s.sharesOwned || 0), 0) || 0;
   }, [shareholders]);
 
-  const calculateRoundImpact = (round: InvestmentRound, currentShares: number) => {
-    const postMoney = calculatePostMoney(round.valCap, round.amount);
-    const newShares = calculateNewShares(round.amount, round.valCap, currentShares);
+  const calculateRoundImpact = (round: InvestmentRound, currentShares: number, previousValuation?: number) => {
+    let effectiveValuation = round.valCap;
+    
+    if (round.type === "CONVERTIBLE" && round.discount && previousValuation) {
+      const discountedValuation = previousValuation * (1 - round.discount / 100);
+      effectiveValuation = Math.min(round.valCap, discountedValuation);
+    }
+
+    const postMoney = calculatePostMoney(effectiveValuation, round.amount);
+    const newShares = calculateNewShares(round.amount, effectiveValuation, currentShares);
     const dilution = calculateDilution(currentShares, newShares);
     const newInvestorOwnership = calculateOwnershipPercentage(newShares, currentShares + newShares);
+    const pricePerShare = calculatePricePerShare(effectiveValuation, currentShares);
 
     return {
       postMoney,
       newShares,
       dilution,
       newInvestorOwnership,
-      pricePerShare: round.valCap / currentShares
+      pricePerShare,
+      effectiveValuation
     };
   };
 
   const simulationResults = useMemo(() => {
     let currentShares = totalShares;
-    let cumulativeDilution = 0;
+    let previousValuation: number | undefined;
+    let results: (InvestmentRound & { 
+      totalShares: number;
+      cumulativeDilution: number;
+      effectiveValuation: number;
+    })[] = [];
     
-    return rounds.map((round, index) => {
-      const impact = calculateRoundImpact(round, currentShares);
+    rounds.forEach((round, index) => {
+      const impact = calculateRoundImpact(round, currentShares, previousValuation);
       currentShares += impact.newShares;
       
       // Calculate cumulative dilution from initial ownership
       const initialOwnership = 100;
       const currentOwnership = (totalShares / currentShares) * 100;
-      cumulativeDilution = initialOwnership - currentOwnership;
+      const cumulativeDilution = initialOwnership - currentOwnership;
       
-      return {
+      const result = {
+        ...round,
         ...impact,
         cumulativeDilution,
         totalShares: currentShares,
       };
+      
+      results.push(result);
+      previousValuation = impact.postMoney;
     });
+    
+    return results;
   }, [rounds, totalShares]);
 
   const addRound = () => {
-    setRounds([...rounds, { type: "SAFE", amount: 0, valCap: 0, discount: 0 }]);
+    const newRoundId = `round-${rounds.length + 1}`;
+    setRounds([...rounds, { 
+      id: newRoundId,
+      type: "SAFE", 
+      amount: 0, 
+      valCap: 0, 
+      discount: 0 
+    }]);
   };
 
   const removeRound = (index: number) => {

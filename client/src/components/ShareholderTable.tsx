@@ -185,33 +185,7 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
         </Dialog>
       </div>
 
-      <div className="mb-6 p-4 border rounded-lg bg-muted/50">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-medium">Option Pool</h3>
-          <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={optionPoolSize}
-              onChange={(e) => {
-                const value = Number(e.target.value);
-                if (!isNaN(value) && value >= 0) {
-                  fetch("/api/option-pool", {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ size: String(value) }),
-                  });
-                }
-              }}
-              className="w-32"
-            />
-            <span className="text-sm text-muted-foreground">
-              ({optionPoolPercentage.toFixed(2)}% of total)
-            </span>
-          </div>
-        </div>
-      </div>
+      
 
       <Table>
         <TableHeader>
@@ -224,59 +198,98 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
           </TableRow>
         </TableHeader>
         <TableBody>
-          {shareholders?.map((shareholder) => {
-            const currentOwnership = Number(calculateOwnership(shareholder.sharesOwned));
-            const postOwnership = Number(calculateOwnership(shareholder.sharesOwned, true));
-            const ownershipDiff = postOwnership - currentOwnership;
-            
-            return (
-              <TableRow key={shareholder.id}>
-                <TableCell>{shareholder.name}</TableCell>
+          {[
+            ...(shareholders || []).map((shareholder) => {
+              const currentOwnership = Number(calculateOwnership(shareholder.sharesOwned));
+              const postOwnership = Number(calculateOwnership(shareholder.sharesOwned, true));
+              const ownershipDiff = postOwnership - currentOwnership;
+              
+              return (
+                <TableRow key={shareholder.id}>
+                  <TableCell>{shareholder.name}</TableCell>
+                  <TableCell className="text-right font-mono">
+                    {Number(shareholder.sharesOwned).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    {currentOwnership.toFixed(2)}%
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                      <span className={`font-mono ${
+                        ownershipDiff < 0 ? 'text-destructive' : 'text-muted-foreground'
+                      }`}>
+                        {postOwnership.toFixed(2)}%
+                      </span>
+                      {ownershipDiff !== 0 && (
+                        <span className={`text-xs ${
+                          ownershipDiff < 0 ? 'text-destructive' : 'text-green-600'
+                        }`}>
+                          ({ownershipDiff > 0 ? '+' : ''}{ownershipDiff.toFixed(2)}%)
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        if (shareholder.id) {
+                          if (window.confirm(`Are you sure you want to delete ${shareholder.name}?`)) {
+                            deleteMutation.mutate(shareholder.id);
+                          }
+                        }
+                      }}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            }),
+            // Add Option Pool as a table row
+            optionPool && (
+              <TableRow key="option-pool">
+                <TableCell>Option Pool</TableCell>
                 <TableCell className="text-right font-mono">
-                  {Number(shareholder.sharesOwned).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={optionPoolSize}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      if (!isNaN(value) && value >= 0) {
+                        fetch("/api/option-pool", {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ size: String(value) }),
+                        });
+                      }
+                    }}
+                    className="w-32 text-right"
+                  />
                 </TableCell>
                 <TableCell className="text-right font-mono">
-                  {currentOwnership.toFixed(2)}%
+                  {optionPoolPercentage.toFixed(2)}%
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
                     <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                    <span className={`font-mono ${
-                      ownershipDiff < 0 ? 'text-destructive' : 'text-muted-foreground'
-                    }`}>
-                      {postOwnership.toFixed(2)}%
+                    <span className="font-mono text-muted-foreground">
+                      {optionPoolPercentage.toFixed(2)}%
                     </span>
-                    {ownershipDiff !== 0 && (
-                      <span className={`text-xs ${
-                        ownershipDiff < 0 ? 'text-destructive' : 'text-green-600'
-                      }`}>
-                        ({ownershipDiff > 0 ? '+' : ''}{ownershipDiff.toFixed(2)}%)
-                      </span>
-                    )}
                   </div>
                 </TableCell>
-                <TableCell>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => {
-                      if (shareholder.id) {
-                        if (window.confirm(`Are you sure you want to delete ${shareholder.name}?`)) {
-                          deleteMutation.mutate(shareholder.id);
-                        }
-                      }
-                    }}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </TableCell>
+                <TableCell></TableCell>
               </TableRow>
-            );
-          })}
+            )
+          ]}
           <TableRow>
             <TableCell colSpan={5} className="py-4">
               <div className="text-sm text-muted-foreground">
