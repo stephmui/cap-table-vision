@@ -19,11 +19,20 @@ interface InvestmentRound {
   amount: number;
   valCap: number;
   discount?: number;
-  pricePerShare?: number;
-  newShares?: number;
-  postMoneyValuation?: number;
-  roundDilution?: number;
-  newOwnership?: number;
+}
+
+interface RoundImpact {
+  postMoney: number;
+  newShares: number;
+  dilution: number;
+  newInvestorOwnership: number;
+  pricePerShare: number;
+  effectiveValuation: number;
+}
+
+interface SimulationResult extends InvestmentRound, RoundImpact {
+  totalShares: number;
+  cumulativeDilution: number;
 }
 
 interface InvestmentSimulatorProps {
@@ -72,11 +81,7 @@ export default function InvestmentSimulator({ shareholders }: InvestmentSimulato
   const simulationResults = useMemo(() => {
     let currentShares = totalShares;
     let previousValuation: number | undefined;
-    let results: (InvestmentRound & { 
-      totalShares: number;
-      cumulativeDilution: number;
-      effectiveValuation: number;
-    })[] = [];
+    let results: SimulationResult[] = [];
     
     rounds.forEach((round, index) => {
       const impact = calculateRoundImpact(round, currentShares, previousValuation);
