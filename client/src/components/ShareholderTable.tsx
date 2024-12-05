@@ -303,7 +303,7 @@ export default function ShareholderTable({ shareholders, isLoading, investment }
                   />
                 </TableCell>
                 <TableCell className="text-right font-mono">
-                  {optionPoolPercentage.toFixed(2)}%
+                  <span className="font-mono">{optionPoolPercentage.toFixed(2)}%</span>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
