@@ -245,12 +245,17 @@ export default function InvestmentSimulator({ shareholders }: InvestmentSimulato
                     <label className="block text-sm mb-2">Amount ($)</label>
                     <Input
                       type="number"
-                      value={round.amount || ''}
+                      min="0"
+                      value={round.amount}
                       onChange={(e) => {
                         const newRounds = [...rounds];
-                        newRounds[index].amount = Number(e.target.value);
+                        newRounds[index] = {
+                          ...newRounds[index],
+                          amount: Number(e.target.value)
+                        };
                         setRounds(newRounds);
                       }}
+                      placeholder="Enter investment amount"
                     />
                   </div>
 
@@ -260,12 +265,17 @@ export default function InvestmentSimulator({ shareholders }: InvestmentSimulato
                     </label>
                     <Input
                       type="number"
-                      value={round.valCap || ''}
+                      min="0"
+                      value={round.valCap}
                       onChange={(e) => {
                         const newRounds = [...rounds];
-                        newRounds[index].valCap = Number(e.target.value);
+                        newRounds[index] = {
+                          ...newRounds[index],
+                          valCap: Number(e.target.value)
+                        };
                         setRounds(newRounds);
                       }}
+                      placeholder="Enter valuation cap"
                     />
                   </div>
 
